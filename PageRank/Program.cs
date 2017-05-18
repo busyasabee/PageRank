@@ -10,6 +10,9 @@ namespace PageRank
 {
     class Program
     {
+        static int maxNumberOfLines = 100000;
+        static List<double> errors = new List<double>();
+
         static double distance(Dictionary<Int32, Double> vector1, Dictionary<Int32, Double> vector2)
         {
             double result = 0d;
@@ -31,6 +34,8 @@ namespace PageRank
             Int32 numberOfNodes = 0;
             double d = 0.85;
             double epsilon = 0.0001;
+            int countLines = 0;
+            
 
             using (StreamReader sr = new StreamReader(path, System.Text.Encoding.Default))
             {
@@ -54,6 +59,11 @@ namespace PageRank
 
                     uniqueNods.Add(from);
                     uniqueNods.Add(to);
+                    countLines += 1;
+                    if (countLines == maxNumberOfLines)
+                    {
+                        break;
+                    }
                     //Console.WriteLine(line);
                 }
                 //Int32 t = 0;
@@ -77,6 +87,7 @@ namespace PageRank
             {
                 List<Int32> references = connectionsDict[from];
                 Int32 countReferences = references.Count;
+                //double value = (double)1 / countReferences;
                 // у меня получается при формировании матрицы не обрабатываются висячии узлы
                 // можно потом при умножении это учесть
                 foreach (var to in references)
@@ -125,9 +136,11 @@ namespace PageRank
                 }
 
                 double error = distance(r0, r1);
+                errors.Add(error);
                 Console.WriteLine("Error" + error);
                 if (error < epsilon)
                 {
+                    errors = new List<double>();
                     break;
                 }
                 else
@@ -151,10 +164,10 @@ namespace PageRank
             Console.WriteLine("Сумма " + sum2);
             Console.WriteLine("Число итераций " + countIterations);
             
-            foreach (var key in r1.Keys)
-            {
-                Console.WriteLine(r1[key]);
-            }
+            //foreach (var key in r1.Keys)
+            //{
+            //    Console.WriteLine(r1[key]);
+            //}
             int t = 3;
 
             //foreach (Int32 key in connectionsDict.Keys)
@@ -171,14 +184,15 @@ namespace PageRank
 
         static void modifiedPowerIteration()
         {
-            String path = @"E:\Projects\Visual Studio\PageRank\file.txt";
+            String path = @"E:\Projects\Visual Studio\PageRank\web-Stanford.txt";
             Dictionary<Int32, List<Int32>> connectionsDict = new Dictionary<Int32, List<Int32>>();
             HashSet<Int32> uniqueNods = new HashSet<int>();
 
             Int32 numberOfNodes = 0;
             double d = 0.85;
-            double epsilon = 0.0001;
+            double epsilon = 0.001;
             Int32 allReferencesCount = 0;
+            int countLines = 0;
 
             using (StreamReader sr = new StreamReader(path, System.Text.Encoding.Default))
             {
@@ -203,6 +217,11 @@ namespace PageRank
 
                     uniqueNods.Add(from);
                     uniqueNods.Add(to);
+                    countLines += 1;
+                    if (countLines == maxNumberOfLines)
+                    {
+                        break;
+                    }
                     //Console.WriteLine(line);
                 }
                 //Int32 t = 0;
@@ -266,11 +285,11 @@ namespace PageRank
 
             int countIterations = 0;
 
-            Dictionary<Int32, Double> r0Copy = new Dictionary<Int32, Double>();
-            foreach (KeyValuePair<Int32, Double> entry in r0)
-            {
-                r0Copy.Add(entry.Key, (Double)entry.Value);
-            }
+            Dictionary<Int32, Double> r0Copy = new Dictionary<Int32, Double>(r0.Count);
+            //foreach (KeyValuePair<Int32, Double> entry in r0)
+            //{
+            //    r0Copy.Add(entry.Key, (Double)entry.Value);
+            //}
 
             // считаю ранги по итерациям
             do
@@ -278,15 +297,16 @@ namespace PageRank
 
                 foreach (var node in uniqueNods)
                 {
+                    r0Copy[node] = r0[node];
                     double sum = 0d;
 
                     // если компоненты r0 и r1 не отличаются, то не вычисляем их
                     if (r1.ContainsKey(node))
                     {
-                        double diff = Math.Abs(r0[node] - r1[node]);
+                        double diff = Math.Abs(r0Copy[node] - r1[node]);
                         if (diff < epsilon)
                         {
-                            r1[node] = r0[node];
+                            r1[node] = r0Copy[node];
                             continue;
                         }
                     }
@@ -314,11 +334,13 @@ namespace PageRank
                 }
 
                 double error = distance(r0Copy, r1);
-                Console.WriteLine("Error" + error);
+                errors.Add(error);
+                Console.WriteLine("Error " + error);
                 countIterations += 1;
 
                 if (error < epsilon)
                 {
+                    errors = new List<double>();
                     break;
                 }
                 else
@@ -346,10 +368,29 @@ namespace PageRank
             //}
             //int t = 3;
         }
+
+        static void writeToFile(string fileName)
+        {
+            using(StreamWriter sw = new StreamWriter(fileName, false, Encoding.Unicode))
+            {
+                sw.Write("Iteration" + "\t");
+                sw.Write("Error" + "\t");
+                sw.Write("\r\n");
+
+                for (int i = 0; i < errors.Count; i++)
+                {
+                    sw.Write(i+1 + "\t");
+                    sw.Write(errors[i] + "\t");
+                    sw.Write("\r\n");
+                }
+            }
+            
+        }
         static void Main(string[] args)
         {
-            //simplePowerIteration();
-            modifiedPowerIteration();
+            simplePowerIteration();
+            writeToFile("simplePowerIteration.csv");
+            //modifiedPowerIteration();
             Console.ReadKey();
         }
     }
