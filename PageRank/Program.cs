@@ -12,6 +12,8 @@ namespace PageRank
     {
         static int maxNumberOfLines = 100000;
         static List<double> errors = new List<double>();
+        static double epsilon = 0.0001;
+        static double d = 0.85;
 
         static double distance(Dictionary<Int32, Double> vector1, Dictionary<Int32, Double> vector2)
         {
@@ -32,8 +34,6 @@ namespace PageRank
             HashSet<Int32> uniqueNods = new HashSet<int>();
             
             Int32 numberOfNodes = 0;
-            double d = 0.85;
-            double epsilon = 0.0001;
             int countLines = 0;
             
 
@@ -72,10 +72,9 @@ namespace PageRank
             numberOfNodes = uniqueNods.Count;
             //uniqueNods = null;
             Dictionary<Int32, Dictionary<Int32, Double>> P = new Dictionary<int, Dictionary<int, double>>(); // матрица переходов
-            //double[] r0 = new double[numberOfNodes]; // начальный вектор рангов
-            //double[] r1 = new double[numberOfNodes];
             Dictionary<Int32, Double> r0 = new Dictionary<int, double>();
             Dictionary<Int32, Double> r1 = new Dictionary<int, double>();
+
             // формирую матрицу переходов
             // иду по вершинам в словаре, делю 1 на число ссылок из вершины
             foreach (var from in connectionsDict.Keys)
@@ -87,21 +86,23 @@ namespace PageRank
             {
                 List<Int32> references = connectionsDict[from];
                 Int32 countReferences = references.Count;
-                //double value = (double)1 / countReferences;
+                double value = (double)1 / countReferences;
                 // у меня получается при формировании матрицы не обрабатываются висячии узлы
                 // можно потом при умножении это учесть
                 foreach (var to in references)
                 {
-                    P[from].Add(to, (double)1 / countReferences);
+                    P[from].Add(to, value);
    
                 }
 
             }
 
+            double equalProbability = (double)1 / numberOfNodes;
+
             // задаю начальный вектор рангов
             foreach (var node in uniqueNods)
             {
-                r0[node] = (double) 1 / numberOfNodes;
+                r0[node] = equalProbability;
             }
 
             int countIterations = 0;
@@ -125,13 +126,13 @@ namespace PageRank
                         }
                         else // висячий узел, переходим во все вершины равновероятно
                         {
-                            sum += d*((double) 1 / numberOfNodes)* r0[nodeFrom];
+                            sum += d*(equalProbability)* r0[nodeFrom];
                         }
                         
 
                     }
 
-                    r1[node] = sum + (1 - d) * (double)1 / numberOfNodes; // равновероятно делаем телепорт
+                    r1[node] = sum + (1 - d) * equalProbability; // равновероятно делаем телепорт
 
                 }
 
@@ -140,7 +141,6 @@ namespace PageRank
                 Console.WriteLine("Error" + error);
                 if (error < epsilon)
                 {
-                    errors = new List<double>();
                     break;
                 }
                 else
@@ -168,7 +168,6 @@ namespace PageRank
             //{
             //    Console.WriteLine(r1[key]);
             //}
-            int t = 3;
 
             //foreach (Int32 key in connectionsDict.Keys)
             //{
@@ -189,10 +188,9 @@ namespace PageRank
             HashSet<Int32> uniqueNods = new HashSet<int>();
 
             Int32 numberOfNodes = 0;
-            double d = 0.85;
-            double epsilon = 0.001;
             Int32 allReferencesCount = 0;
             int countLines = 0;
+            int countIterations = 0;
 
             using (StreamReader sr = new StreamReader(path, System.Text.Encoding.Default))
             {
@@ -222,16 +220,14 @@ namespace PageRank
                     {
                         break;
                     }
-                    //Console.WriteLine(line);
                 }
                 //Int32 t = 0;
             }
 
             numberOfNodes = uniqueNods.Count;
-            //uniqueNods = null;
+            double equalProbability = (double)1 / numberOfNodes;
             Dictionary<Int32, Dictionary<Int32, Double>> P = new Dictionary<int, Dictionary<int, double>>(); // матрица переходов
-            //double[] r0 = new double[numberOfNodes]; // начальный вектор рангов
-            //double[] r1 = new double[numberOfNodes];
+
             Dictionary<Int32, Double> r0 = new Dictionary<int, double>();
             Dictionary<Int32, Double> r1 = new Dictionary<int, double>();
             // формирую матрицу переходов
@@ -245,11 +241,12 @@ namespace PageRank
             {
                 List<Int32> references = connectionsDict[from];
                 Int32 countReferences = references.Count;
+                double probability = (double)1 / countReferences;
                 // у меня получается при формировании матрицы не обрабатываются висячии узлы
                 // можно потом при умножении это учесть
                 foreach (var to in references)
                 {
-                    P[from].Add(to, (double)1 / countReferences);
+                    P[from].Add(to, probability);
 
                 }
 
@@ -261,7 +258,7 @@ namespace PageRank
             foreach (var nodeTo in uniqueNods)
             {
                 int countReferencesOnNode = 0;
-                foreach(var nodeFrom in uniqueNods)
+                foreach (var nodeFrom in uniqueNods)
                 {
                     if (P.ContainsKey(nodeFrom))
                     {
@@ -277,13 +274,19 @@ namespace PageRank
                     }
 
 
-                    
                 }
 
                 r0[nodeTo] = (double)countReferencesOnNode / allReferencesCount;
             }
 
-            int countIterations = 0;
+
+            //// одинаковая начальная вероятность
+          
+
+            //foreach (var node in uniqueNods)
+            //{
+            //    r0[node] = equalProbability;
+            //}
 
             Dictionary<Int32, Double> r0Copy = new Dictionary<Int32, Double>(r0.Count);
             //foreach (KeyValuePair<Int32, Double> entry in r0)
@@ -322,12 +325,12 @@ namespace PageRank
                         }
                         else // висячий узел, переходим во все вершины равновероятно
                         {
-                            sum += d * ((double)1 / numberOfNodes) * r0[nodeFrom];
+                            sum += d * equalProbability * r0[nodeFrom];
                         }
 
                     }
 
-                    r1[node] = sum + (1 - d) * (double)1 / numberOfNodes; // равновероятно делаем телепорт
+                    r1[node] = sum + (1 - d) * equalProbability; // равновероятно делаем телепорт
                     r0[node] = r1[node];
                   
 
@@ -340,7 +343,6 @@ namespace PageRank
 
                 if (error < epsilon)
                 {
-                    errors = new List<double>();
                     break;
                 }
                 else
@@ -349,7 +351,6 @@ namespace PageRank
                 }
 
                 r1 = new Dictionary<int, double>();
-                int t2 = 3;
 
             } while (true);
 
@@ -383,14 +384,17 @@ namespace PageRank
                     sw.Write(errors[i] + "\t");
                     sw.Write("\r\n");
                 }
+
+                errors = new List<double>();
             }
             
         }
         static void Main(string[] args)
         {
             simplePowerIteration();
-            writeToFile("simplePowerIteration.csv");
+            writeToFile("simplePI" + maxNumberOfLines + ".csv");
             //modifiedPowerIteration();
+            //writeToFile("modifiedPIv2_" + maxNumberOfLines + ".csv");
             Console.ReadKey();
         }
     }
